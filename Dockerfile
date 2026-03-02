@@ -1,4 +1,4 @@
-FROM phusion/baseimage:jammy-1.0.1
+FROM phusion/baseimage:noble
 MAINTAINER Nicolas Richeton <nicolas.richeton@gmail.com>
 
 ENV DEBIAN_FRONTEND noninteractive
