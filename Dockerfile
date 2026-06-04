@@ -1,28 +1,20 @@
-FROM phusion/baseimage:noble
+FROM debian:bookworm-slim
 MAINTAINER Nicolas Richeton <nicolas.richeton@gmail.com>
 
-ENV DEBIAN_FRONTEND noninteractive
-ENV LETSENCRYPT_HOME /etc/letsencrypt
-ENV DOMAINS ""
-ENV WEBMASTER_MAIL ""
-
-# Manually set the apache environment variables in order to get apache to work immediately.
-RUN echo $WEBMASTER_MAIL > /etc/container_environment/WEBMASTER_MAIL && \
-    echo $DOMAINS > /etc/container_environment/DOMAINS && \
-    echo $LETSENCRYPT_HOME > /etc/container_environment/LETSENCRYPT_HOME
-    
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["/sbin/my_init"]
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LETSENCRYPT_HOME=/etc/letsencrypt
+ENV DOMAINS=""
+ENV WEBMASTER_MAIL=""
 
 # Base setup
 RUN apt-get -y update && \
-    apt-get -y dist-upgrade &&\
-    apt-get install -q -y curl apache2 software-properties-common dumb-init && \
-#    add-apt-repository ppa:certbot/certbot && \
-    apt-get -y update && \
+    apt-get -y dist-upgrade && \
+    apt-get install -q -y \
+        curl apache2 dumb-init \
+        supervisor cron rsyslog && \
     apt-get install -q -y python3-certbot-apache && \
     # Add modsecurity
-    apt-get install -q -y --no-install-recommends  libapache2-mod-security2 modsecurity-crs && \    
+    apt-get install -q -y --no-install-recommends libapache2-mod-security2 modsecurity-crs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -35,18 +27,30 @@ RUN echo "ServerName localhost" >> /etc/apache2/conf-enabled/hostname.conf && \
     mkdir -p /var/lock/apache2 && \
     mkdir -p /var/run/apache2
 
-# configure runit
-RUN mkdir -p /etc/service/apache
+# scripts
 ADD config/scripts/run_apache.sh /etc/service/apache/run
-ADD config/scripts/init_letsencrypt.sh /etc/my_init.d/
+ADD config/scripts/init_letsencrypt.sh /init_letsencrypt.sh
 ADD config/scripts/run_letsencrypt.sh /run_letsencrypt.sh
-RUN chmod +x /*.sh && chmod +x /etc/my_init.d/*.sh && chmod +x /etc/service/apache/*
+ADD config/scripts/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /*.sh /etc/service/apache/run
 
 ADD config/crontab /etc/crontab
 
-# Stuff
+# supervisor + syslog
+ADD config/supervisord.conf /etc/supervisord.conf
+ADD config/rsyslog.conf /etc/rsyslog.conf
+RUN mkdir -p /var/log/supervisor/
+
 EXPOSE 80
 EXPOSE 443
 
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/docker-entrypoint.sh"]
+
 #VOLUME [ "$LETSENCRYPT_HOME", "/etc/apache2/sites-available", "/var/log/apache2" ]
-HEALTHCHECK CMD curl --fail http://localhost/ || exit 1
+# Accept any HTTP response (including 302/403) as healthy — Apache just needs to be up.
+# start-period=120s covers the initial Let's Encrypt certificate request on first boot.
+# Redirect all curl output to /dev/null to keep healthcheck logs clean.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
+  CMD curl -s --max-time 5 -o /dev/null http://localhost/ >/dev/null 2>&1 || \
+      curl -sk --max-time 5 -o /dev/null https://localhost/ >/dev/null 2>&1 || exit 1

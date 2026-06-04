@@ -1,22 +1,18 @@
 #!/bin/bash
 source /etc/apache2/envvars
 
+# If Apache is already running (e.g. started by certbot during first-boot
+# certificate request), stop the background daemon cleanly before supervisord
+# takes over in foreground mode. Running two Apache instances would cause a
+# port conflict and supervisord would mark the service as failed.
 if [ -f /var/run/apache2/apache2.pid ]; then
     apachePid=$(cat /var/run/apache2/apache2.pid)
-    echo "Found file 'apache2.pid' with pid $apachePid. Let's check if there is a process belonging to it!"
-    processName=$(ps -p $apachePid -o comm)
-
-    if [ "$processName" != "apache2" ] && [ "$processName" != "/usr/sbin/apache2 -D FOREGROUND" ]; then
-        echo "The found apache.pid is not belonging to an apache-process. I'm going to remove the pid-file."
-        rm -f /var/run/apache2/apache2.pid
-        echo "Removing of pid-file was successfull."
-
-        echo "For cleaning-reasons I'm also killing all apache-processes."
-        killall -9 apache2
-        echo "Now this is a safe place again. Enjoy."
-      else
-        echo "The pid-file is belonging to an apache-process, so it will stay alive."
+    if kill -0 "$apachePid" 2>/dev/null; then
+        echo "Apache daemon already running (pid $apachePid), stopping before foreground handoff"
+        apache2ctl stop 2>/dev/null || kill "$apachePid" 2>/dev/null || true
+        sleep 1
     fi
+    rm -f /var/run/apache2/apache2.pid
 fi
 
 exec /usr/sbin/apache2 -D FOREGROUND

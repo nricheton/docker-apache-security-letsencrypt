@@ -1,1 +1,1 @@
-42 0 1 * * root /run_letsencrypt.sh --domains $DOMAINS >/log/cron-letsencrypt.log 2>&1
+42 0 1 * * root /run_letsencrypt.sh --domains "$DOMAINS" >/log/cron-letsencrypt.log 2>&1
