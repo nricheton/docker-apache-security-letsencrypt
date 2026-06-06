@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LETSENCRYPT_HOME=/etc/letsencrypt
 ENV DOMAINS=""
 ENV WEBMASTER_MAIL=""
+ENV BLOCKED_COUNTRIES=""
 
 # Base setup
 RUN apt-get -y update && \
@@ -24,12 +25,13 @@ ADD config/conf-available/security.conf /etc/apache2/conf-available/
 RUN echo "ServerName localhost" >> /etc/apache2/conf-enabled/hostname.conf && \
     a2enmod ssl headers proxy proxy_http proxy_html xml2enc rewrite usertrack remoteip && \
     a2dissite 000-default default-ssl && \
-    mkdir -p /var/lock/apache2 && \
-    mkdir -p /var/run/apache2
+    mkdir -p /var/lock/apache2 /var/run/apache2 /var/cache/geoip-block
 
 # scripts
 ADD config/scripts/run_apache.sh /etc/service/apache/run
 ADD config/scripts/init_letsencrypt.sh /init_letsencrypt.sh
+ADD config/scripts/init_geoip.sh /init_geoip.sh
+ADD config/scripts/update_geoip.sh /update_geoip.sh
 ADD config/scripts/run_letsencrypt.sh /run_letsencrypt.sh
 ADD config/scripts/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /*.sh /etc/service/apache/run
