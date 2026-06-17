@@ -64,7 +64,7 @@ ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["supervisord","-n","-c","/etc/supervisord.conf"]
 
 #VOLUME [ "$LETSENCRYPT_HOME", "/etc/apache2/sites-available", "/var/log/apache2" ]
-HEALTHCHECK CMD curl --fail http://localhost/ || exit 1
+HEALTHCHECK CMD curl --fail http://localhost/ || curl -k --fail https://localhost/ || exit 1
 
 # stop processing ARM emulation (comment out next line if built on Raspberry)
 RUN [ "cross-build-end" ]
