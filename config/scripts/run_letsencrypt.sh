@@ -9,10 +9,15 @@ if ! echo "$WEBMASTER_MAIL" | grep -qE '^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-
   exit 1
 fi
 
+REDIRECT_FLAG=""
+if [ -n "$NO_REDIRECT" ]; then
+  REDIRECT_FLAG="--no-redirect"
+fi
+
 if [ -n "$STAGING" ]; then
   echo "Using Let's Encrypt Staging environment..."
-  certbot -n --staging --expand --apache --agree-tos --email "$WEBMASTER_MAIL" "$@"
+  certbot -n --staging --expand --apache --agree-tos --email "$WEBMASTER_MAIL" $REDIRECT_FLAG "$@"
 else
   echo "Using Let's Encrypt Production environment..."
-  certbot -n --expand --apache --agree-tos --email "$WEBMASTER_MAIL" "$@"
+  certbot -n --expand --apache --agree-tos --email "$WEBMASTER_MAIL" $REDIRECT_FLAG "$@"
 fi
