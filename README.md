@@ -23,12 +23,7 @@ Now you have locally an apache running, which gets it SSL-certificates from Let'
 
 The image will get letsencrypt-certificates on first boot. A cron-job renews the existing certificates automatically, so you don't have to care about it.
 
-If you want to expand your certificate and you can remove the existing docker-container and start new one with the updated `DOMAINS`-list. If you don't want to recreate the container you can execute the following commands:
-
-```
-$ UPDATED_DOMAINS="example.org,more.example.org"
-$ docker exec -it apache-ssl /run_letsencrypt.sh --domains $UPDATED_DOMAINS
-```
+If `DOMAINS` changes between container restarts, the certificate is automatically expanded on the next startup to include the new domains.
 
 ### Configuring docker-container
 
@@ -37,6 +32,7 @@ It's possible to configure the docker-container by setting the following environ
 - `DOMAINS`, configures which for which domains a SSL-certificate shall be requested from Let's Encrypt, default is `""`. Must be given as comma-seperated list, f.e.: `"example.com,my-internet.org,more.example.com"`.
 - `WEBMASTER_MAIL`, Let's Encrypt needs a mail-address from the webmaster of the requested domain. You have to set it, otherwise Let's Encrypt won't give the certificates. Default is `""`. Must be given as simple mail-address, f.e.: `"webmaster@example.com"`.
 - `STAGING`, if set with a not-null string use Let's Encrypt Staging environment to avoid rate limits during development.
+- `NO_REDIRECT`, if set, certbot will not attempt to configure HTTP-to-HTTPS redirects automatically. Useful when a catch-all `VirtualHost *:80` already handles redirections for all domains.
 
 ### Location of letsencrypt-certs
 
