@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 MAINTAINER Nicolas Richeton <nicolas.richeton@gmail.com>
 
 ENV DEBIAN_FRONTEND=noninteractive
